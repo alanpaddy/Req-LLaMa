@@ -1,0 +1,214 @@
+pragma runLim,0
+#include "C:/path to library/Module_Unique_Ids_V_1.inc"
+string s_codes1= "\n\t" "\r" "\"" //ascii(212)	//strings to remove
+
+string tempStrType = ""
+Buffer buf = create
+
+string list_contracts[]=
+{
+/*
+REMOVED TO PROTECT PROPRIETY DATA
+*/
+}
+
+//Helper function to replace special characters. Avoids csv format issues.
+void ReplaceCharCodes(Buffer &bufInput, string s_Codes, char ch_CharReplace)
+{       
+	if (null bufInput or null s_Codes)
+	{
+		return	// nothing to do
+	}
+	if (null ch_CharReplace)
+	{
+	  return // inserting null will terminate the buffer
+  } 	
+ 
+	int LenCode	= length(s_Codes)
+	int i,LocNew, LocOld			// Pointer into Codes    	// Found positions of Code in Buffer
+	char ch
+  
+	for (i=0; i<LenCode; i++)
+	{	// For every character in Codes, replace all instances in the Buffer
+	   ch 		= s_Codes[i]
+	   LocNew	= 0
+	   LocOld	= -1
+	   while(LocNew >= 0)
+	   {  
+		   LocNew = contains(bufInput, ch, LocOld+1)
+	      if (LocNew >= 0) 
+	      {		      
+		      set(bufInput, LocNew, ch_CharReplace ) 
+        }
+	      LocOld	= LocNew         
+	   }
+	}	// end for all Codes to replace
+}	// end ReplaceCharCodes(Buffer)
+
+
+//Helper function for "Object Type" or "ObjectType" attribute inconsistency
+string probe_ObjectType(Object ob, Module mod)
+{
+ //Classify the Object
+    string strObjType=""
+    string stringTemp=""
+    bool ObjTypeExists=false
+
+    //Is there an Object Type?
+    
+    AttrDef adObjType = find(mod, "Object Type")
+    if(!null adObjType)
+    {
+        ObjTypeExists=true
+        strObjType=ob."Object Type"
+    }
+    if(null adObjType)
+    {
+        adObjType = find(mod, "ObjectType")
+        if(!null adObjType)
+        {
+            ObjTypeExists=true
+            strObjType=ob."ObjectType"
+        }
+        else
+        {
+            ObjTypeExists=false
+        }
+    }
+
+    if(ObjTypeExists==true)
+    {
+        stringTemp= strObjType 
+        
+    }
+    else if(ObjTypeExists==false)
+    {
+        stringTem="Ptuf"
+    }
+    return stringTemp
+}
+
+
+string Probe_ContractType(string UID)
+{
+    int i_1=0
+    int i_2=0
+    int i_3=0
+
+    string contractType=""
+    string CivilsContracts[] =
+    {
+/*
+REMOVED TO PROTECT PROPRIETY DATA
+*/
+    }
+    string StationsContracts[] =
+    {
+/*
+REMOVED TO PROTECT PROPRIETY DATA
+*/
+    }
+    string RailSystemsContracts[]=
+    {
+/*
+REMOVED TO PROTECT PROPRIETY DATA
+*/
+    }
+    for (i_1=0; i_1<sizeof(CivilsContracts);i_1++)
+    {
+        if (CivilsContracts[i_1]==UID)
+        {
+            contractType="Civils"
+        }
+    }
+    for (i_2=0; i_2<sizeof(StationsContracts);i_2++)
+    {
+        if (StationsContracts[i_2]==UID)
+        {
+            contractType="Stations"
+        }
+    }
+    for (i_3=0; i_3<sizeof(RailSystemsContracts);i_3++)
+    {
+        if (RailSystemsContracts[i_3]==UID)
+        {
+            contactType="Rail Systems"
+        }
+    }
+    return contractType
+}
+
+void Process_Modules(string IDList[], Stream writingBuf)
+{
+    int i
+    AttrDef adModuleType
+
+    
+    for (i=0; i<sizeof(IDList); i++)
+    {
+        string UID = ""
+        string ContracType=""
+        UID = IDList[i]
+        
+        Item I = itemFromID(UID)
+        Module m = read(fullName(I), false,false)
+        filtering off 
+        ContracType=Probe_ContractType(UID)
+
+        print "processing "fullName(I) "\n"      
+
+        Object o
+        for o in entire m do
+        {
+            if (!(null o || isDeleted o))
+            {
+                string strObjType = ""
+                string strObjTypeTmp=""
+                string strObjText=""
+                
+                strObjType=probe_ObjectType(o,m)
+                if (probe_ObjectType(o,m)=="Heading")
+                {
+                    tempStrType = probeAttr_(o, "Object Heading")
+                    if (!null tempStrType)
+                    {
+                        buf  = tempStrType
+                        ReplaceCharCodes(buf, s_codes1,' ')
+                        tempStrType = stringOf buf
+                        strObjText = tempStrType
+                    }
+                }
+                else
+                {
+                    tempStrType = probeAttr_(o, "Object Text")
+                    if (!null tempStrType)
+                    {
+                        buf  = tempStrType
+                        ReplaceCharCodes(buf, s_codes1,' ')
+                        tempStrType = stringOf buf
+                        strObjText = tempStrType
+                    }
+                } 
+                writingBuf << ContracType "," name(m) ","  "'" UID ","  identifier(o) "," "\"" strObjType "\""  "," "\"" strObjText "\"" "\n"
+            }
+        }
+        close m
+    }
+}
+
+void Configure_Spreadsheet(string list_input[])
+{
+    Locale loc = userLocale 
+    string fName="//Path to output//"
+    fName = fName "Output.csv"
+    Stream writingBuf = write(fName)
+
+    writingBuf << "Discipline" "," "Module Name" "," "Module UID" "," "Requirement ID" "," "Object Type" "," "Object Text" "\n"
+
+    Process_Modules(list_input, writingBuf)
+    close writingBuf
+    print "done"
+}
+
+Configure_Spreadsheet(list_contracts)
+
